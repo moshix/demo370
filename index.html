@@ -82,6 +82,7 @@
             left: 20px;
             z-index: 1000;
             display: flex;
+            flex-direction: row;
             gap: 10px;
         }
 
@@ -89,12 +90,13 @@
             background: transparent;
             border: 2px solid #fff;
             color: #fff;
-            padding: 10px 20px;
+            padding: 8px 16px;
             cursor: pointer;
             font-family: 'Courier New', Courier, monospace;
             text-transform: uppercase;
-            font-size: 14px;
+            font-size: 12px;
             transition: all 0.3s ease;
+            width: 100px;
         }
 
         .control-button:hover {
@@ -105,6 +107,19 @@
         .control-button.active {
             background: #fff;
             color: #000;
+        }
+
+        /* Media query for mobile devices */
+        @media (max-width: 768px) {
+            .audio-controls {
+                flex-direction: column;
+            }
+            
+            .control-button {
+                padding: 6px 12px;
+                font-size: 10px;
+                width: 80px;
+            }
         }
 
         .version-number {
@@ -150,7 +165,7 @@
         <button id="start-button">Click to Start</button>
     </div>
     <div id="scene-overlay">Scene 1: Neon City</div>
-    <div class="version-number">v0.7</div>
+    <div class="version-number">v0.8</div>
     <div class="song-name"></div>
     <div class="copyright">(c) by hot dog studios</div>
     <script type="module">
@@ -160,6 +175,7 @@
         // 0.02-0.5 add scenes and audio
         // 0.6 add version number and song name 
         // 0.7 favicon and copyright
+        // 0.8 support mobile phones better 
         
         
         // Scene Configuration
