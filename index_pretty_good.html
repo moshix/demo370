@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>80s Retro 3D Demo</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #scene-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+            color: #fff;
+            font-size: 3rem;
+            text-shadow: 0 0 10px #f0f, 0 0 20px #f0f, 0 0 30px #f0f;
+        }
+    </style>
+</head>
+<body>
+    <div id="scene-overlay">Scene 1: Neon City</div>
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.module.js';
+
+        // Scene Configuration
+        const scenes = [
+            {
+                text: "MVS/XA",
+                backgroundColor: 0x000000,
+                meshType: "grid",
+                meshColor: 0xff00ff, // Add mesh color
+                wordColors: ["#ff00ff", "#00ffff", "#ff6600"]
+            },
+            {
+                text: "VM/370",
+                backgroundColor: 0x000033,
+                meshType: "hills",
+                meshColor: 0x00ff00, // Add mesh color
+                wordColors: ["#00ff1e", "#ff0200", "#ffff00"]
+            },
+            {
+                text: "MVS 3.8",
+                backgroundColor: 0x001a1a,
+                meshType: "wave",
+                meshColor: 0xffff00, // Add mesh color
+                wordColors: ["#f200ff", "#00ffff", "#ff6600"]
+            }
+        ];
+
+        let currentSceneIndex = 0;
+
+        // Three.js Setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 20, 30);
+
+        const wordContainer = document.getElementById("scene-overlay");
+
+        // Lights
+        const light = new THREE.PointLight(0xffffff, 1);
+        light.position.set(0, 50, 50);
+        scene.add(light);
+
+        let mesh;
+
+        function createMesh(type) {
+            if (mesh) scene.remove(mesh);
+                // Get current scene's mesh color
+                    const currentScene = scenes[currentSceneIndex];
+                        const meshColor = currentScene.meshColor;
+            const geometry = type === "grid" ? createGridMesh() :
+                             type === "hills" ? createHillsMesh() : createWaveMesh();
+
+            const material = new THREE.MeshStandardMaterial({ color: meshColor, wireframe: true });
+            mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+        }
+
+        function createGridMesh() {
+            const geometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+            geometry.rotateX(-Math.PI / 2);
+            return geometry;
+        }
+
+        function createHillsMesh() {
+            const geometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+            geometry.rotateX(-Math.PI / 2);
+
+            const positionAttribute = geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+
+            for (let i = 0; i < positionAttribute.count; i++) {
+                vertex.fromBufferAttribute(positionAttribute, i);
+                vertex.y = Math.sin(vertex.x * 0.1) * Math.cos(vertex.z * 0.1) * 5; // Modify y position for hills
+                positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+            }
+
+            positionAttribute.needsUpdate = true;
+            return geometry;
+        }
+
+        function createWaveMesh() {
+            const geometry = new THREE.PlaneGeometry(100, 100, 50, 50);
+            geometry.rotateX(-Math.PI / 2);
+            return geometry;
+        }
+
+        function updateScene() {
+            currentSceneIndex = (currentSceneIndex + 1) % scenes.length;
+            const currentScene = scenes[currentSceneIndex];
+
+            wordContainer.textContent = currentScene.text;
+            renderer.setClearColor(currentScene.backgroundColor);
+            createMesh(currentScene.meshType);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (mesh) mesh.rotation.y += 0.01;
+            renderer.render(scene, camera);
+        }
+
+        setInterval(updateScene, 6000); // Change scenes every 6 seconds
+        updateScene();
+        animate();
+    </script>
+</body>
+</html>
+
