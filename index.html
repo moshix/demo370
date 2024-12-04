@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>80s Retro 3D Demo</title>
+    <link rel="icon" type="image/x-icon" href="favicon.webp">
+    <title>S/370 Demo Scene</title>
     <style>
         body, html {
             margin: 0;
@@ -158,6 +159,7 @@
         // 0.01 humble beginnings
         // 0.02-0.5 add scenes and audio
         // 0.6 add version number and song name 
+        // 0.7 favicon and copyright
         
         
         // Scene Configuration
@@ -464,7 +466,8 @@ function createHelixMesh() {
             'Cipher_BGM.flac',
             'Cosmic_Solitude_BGM.flac',
             'Melancholy_BGM.flac',
-            'Moon.mp3'
+            'Moon.mp3',
+            'Fear.mp3'
         ];
         let currentSongIndex = 0;
 
@@ -558,7 +561,9 @@ function createHelixMesh() {
         });
 
         function updateSongDisplay() {
-            const songName = songList[currentSongIndex].replace('.mp3', '');
+            const songName = songList[currentSongIndex]
+                .replace('.mp3', '')
+                .replace('.flac', '');
             document.querySelector('.song-name').textContent = songName;
         }
     </script>
