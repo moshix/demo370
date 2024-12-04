@@ -105,6 +105,39 @@
             background: #fff;
             color: #000;
         }
+
+        .version-number {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .song-name {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .copyright {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -116,9 +149,17 @@
         <button id="start-button">Click to Start</button>
     </div>
     <div id="scene-overlay">Scene 1: Neon City</div>
+    <div class="version-number">v0.6</div>
+    <div class="song-name"></div>
+    <div class="copyright">(c) by hot dog studios</div>
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.module.js';
-
+        // copyright 2024-2025 by hot dog studios
+        // 0.01 humble beginnings
+        // 0.02-0.5 add scenes and audio
+        // 0.6 add version number and song name 
+        
+        
         // Scene Configuration
         const scenes = [
             {
@@ -369,6 +410,7 @@ function createHelixMesh() {
             switch(event.key) {
                 case 'ArrowRight':
                 case 'ArrowDown':
+                case ' ': // Space bar
                     updateScene(1);  // Move forward
                     break;
                 case 'ArrowLeft':
@@ -416,9 +458,12 @@ function createHelixMesh() {
         let audio, audioContext, analyser, source;
         const songList = [
             'Parallax.mp3',
-            'Fear.mp3',
-            'Terra.mp3',
+            'Aloft_BGM.flac',
             'Degradation.mp3',
+            'Biosignature_BGM.flac',
+            'Cipher_BGM.flac',
+            'Cosmic_Solitude_BGM.flac',
+            'Melancholy_BGM.flac',
             'Moon.mp3'
         ];
         let currentSongIndex = 0;
@@ -436,6 +481,9 @@ function createHelixMesh() {
             
             // Add ended event listener to play next song
             audio.addEventListener('ended', playNextSong);
+            
+            // Update song display
+            updateSongDisplay();
             
             audio.play();
             document.getElementById('start-overlay').style.display = 'none';
@@ -466,6 +514,9 @@ function createHelixMesh() {
             
             // Maintain mute state
             audio.muted = muteButton.classList.contains('active');
+            
+            // Update song display
+            updateSongDisplay();
             
             // Start playing
             audio.play();
@@ -505,6 +556,11 @@ function createHelixMesh() {
                 playNextSong();
             }
         });
+
+        function updateSongDisplay() {
+            const songName = songList[currentSongIndex].replace('.mp3', '');
+            document.querySelector('.song-name').textContent = songName;
+        }
     </script>
 </body>
 </html>
