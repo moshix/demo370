@@ -179,7 +179,7 @@
         // 0.7 favicon and copyright
         // 0.8 support mobile phones better
         // 0.9 ocean waves and reset camera when scenes wrap around
-        
+        // 1.0 fix helix and other small stuff 
          
 
         // Scene Configuration
@@ -304,12 +304,12 @@
 
 function createHelixMesh() {
     const group = new THREE.Group();
-    const objectCount = 80; // Number of objects in the helix
-    const radius = 20; // Radius of the helix
-    const height = 60; // Height of the helix
-    const turns = 6; // Number of turns in the helix
+    const objectCount = 120; // Number of objects in the helix
+    const radius = 35; // Radius of the helix
+    const height = 70; // Height of the helix
+    const turns = 4; // Number of turns in the helix
 
-    const geometry = new THREE.SphereGeometry(0.5, 16, 16); // Geometry for helix elements
+    const geometry = new THREE.SphereGeometry(3, 16, 16); // Geometry for helix elements
     const material = new THREE.MeshStandardMaterial({ color: scenes[currentSceneIndex].meshColor });
 
     for (let i = 0; i < objectCount; i++) {
