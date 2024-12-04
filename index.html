@@ -177,8 +177,9 @@
         // 0.02-0.5 add scenes and audio
         // 0.6 add version number and song name 
         // 0.7 favicon and copyright
-        // 0.8 support mobile phones better 
-        // 0.9 ocean waves
+        // 0.8 support mobile phones better
+        // 0.9 ocean waves and reset camera when scenes wrap around
+        
          
 
         // Scene Configuration
@@ -465,18 +466,13 @@ function createHelixMesh() {
         function updateScene(direction = 1) {
             currentSceneIndex = (currentSceneIndex + direction + scenes.length) % scenes.length;
             const currentScene = scenes[currentSceneIndex];
-            if (!currentScene) {
-                console.error("Scene not found for index:", currentSceneIndex);
-                return;
-            }
-
+            
             // Clear previous content
             wordContainer.innerHTML = '';
             
             // Create new rotating text element
             const textElement = document.createElement('div');
             textElement.className = 'rotating-text';
-            // Join words with a space if it's an array
             textElement.textContent = Array.isArray(currentScene.text) ? currentScene.text.join(' ') : currentScene.text;
             textElement.style.color = currentScene.textColor;
             textElement.style.textShadow = `0 0 10px ${currentScene.textColor}, 
@@ -485,6 +481,14 @@ function createHelixMesh() {
             
             // Add text element to container
             wordContainer.appendChild(textElement);
+            
+            // Reset camera position based on scene type
+            if (currentScene.meshType === "oceanWaves") {
+                camera.position.set(0, 200, 300);
+            } else {
+                camera.position.set(0, 40, 100); // Default camera position for other scenes
+            }
+            camera.lookAt(0, 0, 0);
             
             renderer.setClearColor(currentScene.backgroundColor);
             createMesh(currentScene.meshType);
