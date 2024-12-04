@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>80s Retro 3D Demo</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #scene-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+            color: #fff;
+            font-size: 7rem;
+            text-shadow: 0 0 10px #f0f, 0 0 20px #f0f, 0 0 30px #f0f;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+
+        .rotating-text {
+            transform-style: preserve-3d;
+            animation: rotate3D 10s linear infinite;
+        }
+
+        @keyframes rotate3D {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(360deg); }
+        }
+
+        #start-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        #start-button {
+            padding: 20px 40px;
+            font-size: 24px;
+            background: transparent;
+            border: 2px solid #fff;
+            color: #fff;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        #start-button:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .audio-controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-button {
+            background: transparent;
+            border: 2px solid #fff;
+            color: #fff;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            text-transform: uppercase;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .control-button:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .control-button.active {
+            background: #fff;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="audio-controls">
+        <button id="mute-button" class="control-button">Mute</button>
+        <button id="next-track" class="control-button">Next Track</button>
+    </div>
+    <div id="start-overlay">
+        <button id="start-button">Click to Start</button>
+    </div>
+    <div id="scene-overlay">Scene 1: Neon City</div>
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.module.js';
+
+        // Scene Configuration
+        const scenes = [
+            {
+                text: ["MVS/XA", "31 bit"],
+                backgroundColor: 0x000000,
+                meshType: "grid",
+                meshColor: 0xff00ff, // Neon pink
+                textColor: "#00ff00" // Neon green
+            },
+            {
+                text: ["VM/SP", "MVS/ESA"],
+                backgroundColor: 0x000033,
+                meshType: "hills",
+                meshColor: 0x00ff00, // Neon green
+                textColor: "#ff00ff" // Neon pink
+            },
+            {
+                text: ["VTAM", "VSAM"],
+                backgroundColor: 0x001a1a,
+                meshType: "wave",
+                meshColor: 0xffff00, // Neon yellow
+                textColor: "#00ffff" // Neon cyan
+            },
+            {
+                text: ["COBOL", "PL/I"],
+                backgroundColor: 0x330033,
+                meshType: "sphereGrid",
+                meshColor: 0x00ffff, // Neon cyan
+                textColor: "#ff6600" // Neon orange
+            },
+            {
+                text: ["TSO", "ISPF"],
+                backgroundColor: 0x111111,
+                meshType: "helix",
+                meshColor: 0xff6600, // Neon orange
+                textColor: "#ffff00" // Neon yellow
+            },
+            {
+                text: "IPL IML",
+                backgroundColor: 0x000000,
+                meshType: "beatLines",
+                meshColor: 0x00ccff, // Ocean blue neon color
+                textColor: "#ff33cc" // Keeping the contrasting pink text
+            }
+        ];
+
+        let currentSceneIndex = 0;
+
+        // Three.js Setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 20, 50);
+
+        const wordContainer = document.getElementById("scene-overlay");
+
+        // Lights
+        const light = new THREE.PointLight(0xffffff, 1);
+        light.position.set(0, 50, 50);
+        scene.add(light);
+
+        let mesh;
+
+    function createMesh(type) {
+        if (mesh) scene.remove(mesh);
+        const currentScene = scenes[currentSceneIndex];
+        const meshColor = currentScene.meshColor;
+
+        console.log("Creating mesh of type:", type);
+        console.log("Current scene:", currentScene);
+
+        switch (type) {
+            case "beatLines":
+                mesh = createBeatLinesMesh();
+                break;
+            case "helix":
+                mesh = createHelixMesh();
+                break;
+            case "grid":
+                mesh = new THREE.Mesh(
+                    createGridMesh(),
+                    new THREE.MeshStandardMaterial({ color: meshColor, wireframe: true })
+                );
+                break;
+            case "hills":
+                mesh = new THREE.Mesh(
+                    createHillsMesh(),
+                    new THREE.MeshStandardMaterial({ color: meshColor, wireframe: true })
+                );
+                break;
+            case "wave":
+                mesh = new THREE.Mesh(
+                    createWaveMesh(),
+                    new THREE.MeshStandardMaterial({ color: meshColor, wireframe: true })
+                );
+                break;
+            case "sphereGrid":
+                mesh = createSphereGridMesh();
+                break;
+            default:
+                console.error("Unknown mesh type:", type);
+                return;
+        }
+
+        scene.add(mesh);
+    }
+
+function createHelixMesh() {
+    const group = new THREE.Group();
+    const objectCount = 80; // Number of objects in the helix
+    const radius = 20; // Radius of the helix
+    const height = 60; // Height of the helix
+    const turns = 6; // Number of turns in the helix
+
+    const geometry = new THREE.SphereGeometry(0.5, 16, 16); // Geometry for helix elements
+    const material = new THREE.MeshStandardMaterial({ color: scenes[currentSceneIndex].meshColor });
+
+    for (let i = 0; i < objectCount; i++) {
+        const angle = (i / objectCount) * (turns * Math.PI * 2); // Calculate angle for this object
+        const y = (i / objectCount) * height - height / 2; // Spread objects vertically
+        const x = radius * Math.cos(angle); // X-coordinate
+        const z = radius * Math.sin(angle); // Z-coordinate
+
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.set(x, y, z);
+        group.add(sphere); // Add sphere to the group
+    }
+
+    return group; // Return the group containing all helix elements
+}
+
+
+
+        function createGridMesh() {
+            const geometry = new THREE.PlaneGeometry(1000, 1000, 200, 200);
+            geometry.rotateX(-Math.PI / 2);
+            return geometry;
+        }
+
+        function createHillsMesh() {
+            const geometry = new THREE.PlaneGeometry(1000, 1000, 200, 200);
+            geometry.rotateX(-Math.PI / 2);
+
+            const positionAttribute = geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+
+            for (let i = 0; i < positionAttribute.count; i++) {
+                vertex.fromBufferAttribute(positionAttribute, i);
+                vertex.y = Math.sin(vertex.x * 0.02) * Math.cos(vertex.z * 0.02) * 15;
+                positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+            }
+
+            positionAttribute.needsUpdate = true;
+            return geometry;
+        }
+
+        function createWaveMesh() {
+            const geometry = new THREE.PlaneGeometry(1000, 1000, 200, 200);
+            geometry.rotateX(-Math.PI / 2);
+            
+            const positionAttribute = geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+            
+            for (let i = 0; i < positionAttribute.count; i++) {
+                vertex.fromBufferAttribute(positionAttribute, i);
+                vertex.y = Math.sin(vertex.x * 0.02) * Math.cos(vertex.z * 0.02) * 20;
+                positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+            }
+            
+            positionAttribute.needsUpdate = true;
+            return geometry;
+        }
+
+		function createSphereGridMesh() {
+		    const group = new THREE.Group();
+		    const radius = 4;
+		    const spacing = 15;
+		    const gridSize = 100;
+		
+		    const sphereGeometry = new THREE.SphereGeometry(radius, 16, 16);
+		    const sphereMaterial = new THREE.MeshStandardMaterial({ color: scenes[currentSceneIndex].meshColor });
+		
+		    for (let x = -gridSize / 2; x < gridSize / 2; x++) {
+		        for (let z = -gridSize / 2; z < gridSize / 2; z++) {
+		            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+		            sphere.position.set(x * spacing, 0, z * spacing);
+		            group.add(sphere);
+		        }
+		    }
+		
+		    return group;
+		}
+
+        function createBeatLinesMesh() {
+            const group = new THREE.Group();
+            const lineCount = 100;
+            const spacing = 10;
+            const lineGeometry = new THREE.BoxGeometry(1, 1, 1000);
+            const lineMaterial = new THREE.MeshStandardMaterial({ 
+                color: scenes[currentSceneIndex].meshColor,
+                emissive: scenes[currentSceneIndex].meshColor,
+                emissiveIntensity: 0.5
+            });
+
+            for (let x = -lineCount / 2; x < lineCount / 2; x++) {
+                const line = new THREE.Mesh(lineGeometry, lineMaterial);
+                line.position.set(x * spacing, 0, 0);
+                line.scale.set(1, 1, 1);  // Adjust line thickness if needed
+                group.add(line);
+            }
+
+            return group;
+        }
+
+        function updateScene(direction = 1) {
+            currentSceneIndex = (currentSceneIndex + direction + scenes.length) % scenes.length;
+            const currentScene = scenes[currentSceneIndex];
+            if (!currentScene) {
+                console.error("Scene not found for index:", currentSceneIndex);
+                return;
+            }
+
+            // Clear previous content
+            wordContainer.innerHTML = '';
+            
+            // Create new rotating text element
+            const textElement = document.createElement('div');
+            textElement.className = 'rotating-text';
+            // Join words with a space if it's an array
+            textElement.textContent = Array.isArray(currentScene.text) ? currentScene.text.join(' ') : currentScene.text;
+            textElement.style.color = currentScene.textColor;
+            textElement.style.textShadow = `0 0 10px ${currentScene.textColor}, 
+                                           0 0 20px ${currentScene.textColor}, 
+                                           0 0 30px ${currentScene.textColor}`;
+            
+            // Add text element to container
+            wordContainer.appendChild(textElement);
+            
+            renderer.setClearColor(currentScene.backgroundColor);
+            createMesh(currentScene.meshType);
+        }
+
+        // Add keyboard event listener
+        document.addEventListener('keydown', (event) => {
+            switch(event.key) {
+                case 'ArrowRight':
+                case 'ArrowDown':
+                    updateScene(1);  // Move forward
+                    break;
+                case 'ArrowLeft':
+                case 'ArrowUp':
+                    updateScene(-1); // Move backward
+                    break;
+            }
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (mesh) {
+                if (scenes[currentSceneIndex].meshType === "beatLines") {
+                    analyser.getByteFrequencyData(frequencyData);
+                    if (frequencyData.length > 0) {
+                        mesh.children.forEach((line, index) => {
+                            const frequencyIndex = index % frequencyData.length;
+                            const frequencyValue = frequencyData[frequencyIndex];
+                            const scaleX = 1 + (frequencyValue / 255) * 9050;  // Increased from 20 to 50 for more dramatic effect
+                            line.scale.setX(Math.max(scaleX, 1)); // Scale horizontally with much larger range
+                        });
+                    }
+                    
+                    mesh.position.z += 0.2;
+                    if (mesh.position.z > 500) {
+                        mesh.position.z = -500;
+                    }
+                } else if (scenes[currentSceneIndex].meshType !== "helix") {
+                    mesh.position.z += 0.2;
+                    if (mesh.position.z > 500) {
+                        mesh.position.z = -500;
+                    }
+                } else {
+                    mesh.rotation.y += 0.01;
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        setInterval(() => updateScene(1), 20000); // Change scenes every 20 seconds
+        updateScene(0); // Initial scene setup
+        animate();
+
+        // Initialize variables for audio
+        let audio, audioContext, analyser, source;
+        const songList = [
+            'Parallax.mp3',
+            'Venusian.mp3',
+            'The Pression.mp3',
+            'Fear.mp3',
+            'Terra.mp3',
+            'Degradation.mp3',
+            'Moon.mp3'
+        ];
+        let currentSongIndex = 0;
+
+        // Initialize audio setup function
+        function initAudio() {
+            audio = new Audio(songList[currentSongIndex]);
+            audio.loop = false;  // Disable loop since we want to play next song
+            
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            source = audioContext.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
+            // Add ended event listener to play next song
+            audio.addEventListener('ended', playNextSong);
+            
+            audio.play();
+            document.getElementById('start-overlay').style.display = 'none';
+        }
+
+        // Function to play next song
+        function playNextSong() {
+            currentSongIndex = (currentSongIndex + 1) % songList.length;
+            
+            // Create new audio element
+            const newAudio = new Audio(songList[currentSongIndex]);
+            newAudio.loop = false;
+            
+            // Stop and disconnect old audio
+            if (audio) {
+                audio.pause();
+                source.disconnect();
+            }
+            
+            // Set up new audio
+            audio = newAudio;
+            source = audioContext.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
+            // Add ended event listener
+            audio.addEventListener('ended', playNextSong);
+            
+            // Maintain mute state
+            audio.muted = muteButton.classList.contains('active');
+            
+            // Start playing
+            audio.play();
+        }
+
+        // Add click event listener
+        document.getElementById('start-button').addEventListener('click', () => {
+            initAudio();
+        });
+
+        const frequencyData = new Uint8Array(analyser?.frequencyBinCount || 0);
+
+        function updateAudio() {
+            if (analyser) {  // Only run if analyser exists
+                analyser.getByteFrequencyData(frequencyData);
+            }
+            // Use frequencyData to adjust mesh properties if needed
+            requestAnimationFrame(updateAudio);
+        }
+
+        updateAudio();
+
+        // Add mute button functionality
+        const muteButton = document.getElementById('mute-button');
+        muteButton.addEventListener('click', () => {
+            if (audio) {
+                audio.muted = !audio.muted;
+                muteButton.textContent = audio.muted ? 'Unmute' : 'Mute';
+                muteButton.classList.toggle('active', audio.muted);
+            }
+        });
+
+        // Add next track button functionality
+        const nextButton = document.getElementById('next-track');
+        nextButton.addEventListener('click', () => {
+            if (audio) {
+                playNextSong();
+            }
+        });
+    </script>
+</body>
+</html>
+
