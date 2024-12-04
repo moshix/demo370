@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="favicon.webp">
     <title>S/370 Demo Scene</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
     <style>
         body, html {
             margin: 0;
@@ -165,18 +167,19 @@
         <button id="start-button">Click to Start</button>
     </div>
     <div id="scene-overlay">Scene 1: Neon City</div>
-    <div class="version-number">v0.8</div>
+    <div class="version-number">v0.9</div>
     <div class="song-name"></div>
     <div class="copyright">(c) by hot dog studios</div>
-    <script type="module">
-        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.module.js';
+    <script>
+
         // copyright 2024-2025 by hot dog studios
         // 0.01 humble beginnings
         // 0.02-0.5 add scenes and audio
         // 0.6 add version number and song name 
         // 0.7 favicon and copyright
         // 0.8 support mobile phones better 
-        
+        // 0.9 ocean waves
+         
         
         // Scene Configuration
         const scenes = [
@@ -221,6 +224,13 @@
                 meshType: "beatLines",
                 meshColor: 0x00ccff, // Ocean blue neon color
                 textColor: "#ff33cc" // Keeping the contrasting pink text
+            },
+            {
+                text: ["REXX", "SNA"],
+                backgroundColor: 0x000033,  // Deep blue background
+                meshType: "oceanWaves",
+                meshColor: 0xff00ff,  // Bright aqua neon
+                textColor: "#ff3399"  // Neon pink for contrast
             }
         ];
 
@@ -279,6 +289,9 @@
                 break;
             case "sphereGrid":
                 mesh = createSphereGridMesh();
+                break;
+            case "oceanWaves":
+                mesh = createOceanWavesMesh();
                 break;
             default:
                 console.error("Unknown mesh type:", type);
@@ -395,6 +408,60 @@ function createHelixMesh() {
             return group;
         }
 
+        // New ocean waves implementation
+        function createOceanWavesMesh() {
+            const simplex = new SimplexNoise();
+            const group = new THREE.Group();
+            
+            // Create multiple layers of waves
+            for (let layer = 0; layer < 5; layer++) {
+                const waveGeometry = new THREE.BufferGeometry();
+                const wavePoints = [];
+                const gridSize = 100;
+                const segmentSize = 20;
+                
+                // Create grid of points
+                for (let z = -gridSize; z < gridSize; z++) {
+                    for (let x = -gridSize; x < gridSize; x++) {
+                        wavePoints.push(x * segmentSize, 0, z * segmentSize);
+                    }
+                }
+                
+                waveGeometry.setAttribute('position', new THREE.Float32BufferAttribute(wavePoints, 3));
+                
+                // Create lines connecting points
+                const indices = [];
+                const size = gridSize * 2;
+                
+                for (let z = 0; z < size - 1; z++) {
+                    for (let x = 0; x < size - 1; x++) {
+                        const a = x + z * size;
+                        const b = (x + 1) + z * size;
+                        const c = x + (z + 1) * size;
+                        const d = (x + 1) + (z + 1) * size;
+                        
+                        indices.push(a, b, a, c);
+                        if (x === size - 2) indices.push(b, d);
+                        if (z === size - 2) indices.push(c, d);
+                    }
+                }
+                
+                waveGeometry.setIndex(indices);
+                
+                const waveMaterial = new THREE.LineBasicMaterial({
+                    color: scenes[currentSceneIndex].meshColor,
+                    opacity: 0.5 - layer * 0.1,
+                    transparent: true
+                });
+                
+                const waveMesh = new THREE.LineSegments(waveGeometry, waveMaterial);
+                waveMesh.position.y = layer * 10;
+                group.add(waveMesh);
+            }
+            
+            return group;
+        }
+
         function updateScene(direction = 1) {
             currentSceneIndex = (currentSceneIndex + direction + scenes.length) % scenes.length;
             const currentScene = scenes[currentSceneIndex];
@@ -441,20 +508,41 @@ function createHelixMesh() {
         function animate() {
             requestAnimationFrame(animate);
             if (mesh) {
-                if (scenes[currentSceneIndex].meshType === "beatLines") {
-                    analyser.getByteFrequencyData(frequencyData);
-                    if (frequencyData.length > 0) {
-                        mesh.children.forEach((line, index) => {
-                            const frequencyIndex = index % frequencyData.length;
-                            const frequencyValue = frequencyData[frequencyIndex];
-                            const scaleX = 1 + (frequencyValue / 255) * 9050;  // Increased from 20 to 50 for more dramatic effect
-                            line.scale.setX(Math.max(scaleX, 1)); // Scale horizontally with much larger range
-                        });
-                    }
+                if (scenes[currentSceneIndex].meshType === "oceanWaves") {
+                    const time = Date.now() * 0.001;
                     
-                    mesh.position.z += 0.2;
-                    if (mesh.position.z > 500) {
-                        mesh.position.z = -500;
+                    mesh.children.forEach((waveMesh, layerIndex) => {
+                        const positions = waveMesh.geometry.attributes.position.array;
+                        const simplex = new SimplexNoise(layerIndex);
+                        
+                        for (let i = 0; i < positions.length; i += 3) {
+                            const x = positions[i];
+                            const z = positions[i + 2];
+                            
+                            // Create organic wave movement using noise
+                            positions[i + 1] = 
+                                simplex.noise3D(
+                                    x * 0.003 + time * 0.2, 
+                                    z * 0.003, 
+                                    time * 0.5
+                                ) * 30 * (1 + layerIndex * 0.5);
+                        }
+                        
+                        waveMesh.geometry.attributes.position.needsUpdate = true;
+                    });
+                    
+                    // Rotate camera around the waves
+                    const radius = 300;
+                    const cameraSpeed = 0.1;
+                    camera.position.x = Math.sin(time * cameraSpeed) * radius;
+                    camera.position.z = Math.cos(time * cameraSpeed) * radius;
+                    camera.position.y = 200 + Math.sin(time * 0.5) * 20;
+                    camera.lookAt(0, 0, 0);
+                    
+                    // Move the entire wave system
+                    mesh.position.z += 0.5;
+                    if (mesh.position.z > 1000) {
+                        mesh.position.z = -1000;
                     }
                 } else if (scenes[currentSceneIndex].meshType !== "helix") {
                     mesh.position.z += 0.2;
