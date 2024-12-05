@@ -70,7 +70,7 @@
             cursor: pointer;
             font-family: 'Courier New', Courier, monospace;
             text-transform: uppercase;
-            transition: all 0.3s ease;
+            transition: all 0.4s ease;
         }
 
         #start-button:hover {
@@ -156,6 +156,19 @@
             z-index: 1000;
             pointer-events: none;
         }
+
+        .scene-transition {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 9999;
+        }
     </style>
 </head>
 <body>
@@ -167,9 +180,10 @@
         <button id="start-button">Click to Start</button>
     </div>
     <div id="scene-overlay">Scene 1: Neon City</div>
-    <div class="version-number">v1.0</div>
+    <div class="version-number">v1.1</div>
     <div class="song-name"></div>
     <div class="copyright">(c) by hot dog studios</div>
+    <div class="scene-transition"></div>
     <script>
 
         // copyright 2024-2025 by hot dog studios
@@ -180,6 +194,7 @@
         // 0.8 support mobile phones better
         // 0.9 ocean waves and reset camera when scenes wrap around
         // 1.0 fix helix and other small stuff 
+        // 1.1 dimming between scenes, and mix songs randomly
          
 
         // Scene Configuration
@@ -464,34 +479,47 @@ function createHelixMesh() {
         }
 
         function updateScene(direction = 1) {
-            currentSceneIndex = (currentSceneIndex + direction + scenes.length) % scenes.length;
-            const currentScene = scenes[currentSceneIndex];
+            // Add transition effect
+            const transition = document.querySelector('.scene-transition');
+            transition.style.opacity = '0.7';  // Dim screen
             
-            // Clear previous content
-            wordContainer.innerHTML = '';
-            
-            // Create new rotating text element
-            const textElement = document.createElement('div');
-            textElement.className = 'rotating-text';
-            textElement.textContent = Array.isArray(currentScene.text) ? currentScene.text.join(' ') : currentScene.text;
-            textElement.style.color = currentScene.textColor;
-            textElement.style.textShadow = `0 0 10px ${currentScene.textColor}, 
-                                           0 0 20px ${currentScene.textColor}, 
-                                           0 0 30px ${currentScene.textColor}`;
-            
-            // Add text element to container
-            wordContainer.appendChild(textElement);
-            
-            // Reset camera position based on scene type
-            if (currentScene.meshType === "oceanWaves") {
-                camera.position.set(0, 200, 300);
-            } else {
-                camera.position.set(0, 40, 100); // Default camera position for other scenes
-            }
-            camera.lookAt(0, 0, 0);
-            
-            renderer.setClearColor(currentScene.backgroundColor);
-            createMesh(currentScene.meshType);
+            // Delay scene update slightly
+            setTimeout(() => {
+                currentSceneIndex = (currentSceneIndex + direction + scenes.length) % scenes.length;
+                const currentScene = scenes[currentSceneIndex];
+                
+                // Clear previous content
+                wordContainer.innerHTML = '';
+                
+                // Create new rotating text element
+                const textElement = document.createElement('div');
+                textElement.className = 'rotating-text';
+                textElement.textContent = Array.isArray(currentScene.text) ? currentScene.text.join(' ') : currentScene.text;
+                textElement.style.color = currentScene.textColor;
+                textElement.style.textShadow = `0 0 10px ${currentScene.textColor}, 
+                                               0 0 20px ${currentScene.textColor}, 
+                                               0 0 30px ${currentScene.textColor}`;
+                
+                // Add text element to container
+                wordContainer.appendChild(textElement);
+                
+                // Reset camera position based on scene type
+                if (currentScene.meshType === "oceanWaves") {
+                    camera.position.set(0, 200, 300);
+                } else {
+                    camera.position.set(0, 40, 100);
+                }
+                camera.lookAt(0, 0, 0);
+                
+                renderer.setClearColor(currentScene.backgroundColor);
+                createMesh(currentScene.meshType);
+                
+                // Remove transition effect
+                setTimeout(() => {
+                    transition.style.opacity = '0';
+                }, 150);  // Brief delay before removing dim effect
+                
+            }, 300);  // Delay before scene change
         }
 
         // Add keyboard event listener
@@ -566,7 +594,7 @@ function createHelixMesh() {
 
         // Initialize variables for audio
         let audio, audioContext, analyser, source;
-        const songList = [
+        const songList = shuffleArray([
             'Parallax.mp3',
             'Aloft_BGM.flac',
             'Degradation.mp3',
@@ -576,7 +604,7 @@ function createHelixMesh() {
             'Melancholy_BGM.flac',
             'Moon.mp3',
             'Fear.mp3'
-        ];
+        ]);
         let currentSongIndex = 0;
 
         // Initialize audio setup function
@@ -673,6 +701,15 @@ function createHelixMesh() {
                 .replace('.mp3', '')
                 .replace('.flac', '');
             document.querySelector('.song-name').textContent = songName;
+        }
+
+        // Add this function to shuffle arrays
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
         }
     </script>
 </body>
