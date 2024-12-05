@@ -180,7 +180,7 @@
         <button id="start-button">Click to Start</button>
     </div>
     <div id="scene-overlay">Scene 1: Neon City</div>
-    <div class="version-number">v1.1</div>
+    <div class="version-number">v1.2</div>
     <div class="song-name"></div>
     <div class="copyright">(c) by hot dog studios</div>
     <div class="scene-transition"></div>
@@ -195,6 +195,7 @@
         // 0.9 ocean waves and reset camera when scenes wrap around
         // 1.0 fix helix and other small stuff 
         // 1.1 dimming between scenes, and mix songs randomly
+        // 1.2 new neon tunnel 
          
 
         // Scene Configuration
@@ -247,6 +248,13 @@
                 meshType: "oceanWaves",
                 meshColor: 0xff00ff,  // Bright aqua neon
                 textColor: "#ff3399"  // Neon pink for contrast
+            },
+            {
+                text: ["D A,L", "Q N"],
+                backgroundColor: 0x000000,
+                meshType: "neonTunnel",
+                meshColor: 0x39ff14,  // Neon green
+                textColor: "#00ffff"
             }
         ];
 
@@ -308,6 +316,9 @@
                 break;
             case "oceanWaves":
                 mesh = createOceanWavesMesh();
+                break;
+            case "neonTunnel":
+                mesh = createNeonTunnelMesh();
                 break;
             default:
                 console.error("Unknown mesh type:", type);
@@ -473,6 +484,43 @@ function createHelixMesh() {
                 const waveMesh = new THREE.LineSegments(waveGeometry, waveMaterial);
                 waveMesh.position.y = layer * 10;
                 group.add(waveMesh);
+            }
+            
+            return group;
+        }
+
+        function createNeonTunnelMesh() {
+            const group = new THREE.Group();
+            const ringCount = 40;
+            
+            for (let i = 0; i < ringCount; i++) {
+                // Create main ring
+                const geometry = new THREE.RingGeometry(30, 32, 32);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0x39ff14,
+                    side: THREE.DoubleSide
+                });
+                
+                // Create halo ring
+                const haloGeometry = new THREE.RingGeometry(28, 34, 32);
+                const haloMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x39ff14,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.4
+                });
+                
+                const ring = new THREE.Mesh(geometry, material);
+                const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+                
+                const ringGroup = new THREE.Group();
+                ringGroup.add(ring);
+                ringGroup.add(halo);
+                
+                ringGroup.position.z = -200 - (i * 100);
+                ringGroup.userData.speed = 2.0; // speed of camera
+                
+                group.add(ringGroup);
             }
             
             return group;
@@ -710,6 +758,51 @@ function createHelixMesh() {
                 [array[i], array[j]] = [array[j], array[i]];
             }
             return array;
+        }
+
+        if (scenes[currentSceneIndex].meshType === "neonTunnel") {
+            const time = Date.now() * 0.001;
+            
+            mesh.children.forEach(ringGroup => {
+                // Increase movement speed here
+                ringGroup.position.z += 0.66;  // Doubled from 0.33
+                
+                // Calculate curve based on z position
+                const zPos = ringGroup.position.z;
+                
+                // Only start curving after a certain distance
+                if (zPos < -3000) {
+                    const curveAmount = 100;
+                    const frequency = 0.011;
+                    ringGroup.position.x = Math.sin((zPos + 1000) * frequency) * curveAmount;
+                    
+                    const tangent = Math.cos((zPos + 1000) * frequency) * frequency * curveAmount;
+                    ringGroup.rotation.y = Math.atan(tangent);
+                } else {
+                    ringGroup.position.x = 0;
+                    ringGroup.rotation.y = 0;
+                }
+                
+                // Reset ring position
+                if (ringGroup.position.z > 0) {
+                    ringGroup.position.z = -8000;
+                    ringGroup.position.x = 0;
+                    ringGroup.rotation.y = 0;
+                }
+                
+                // Rotate halo
+                ringGroup.children[1].rotation.z += 0.01;
+            });
+            
+            // Camera movement
+            const lookAheadZ = -1000;
+            const lookAheadX = Math.sin((lookAheadZ + 1000) * 0.001) * 30;
+            camera.position.set(
+                Math.sin(time * 0.1) * 10,
+                Math.cos(time * 0.25) * 5,
+                50
+            );
+            camera.lookAt(lookAheadX, 0, lookAheadZ);
         }
     </script>
 </body>
