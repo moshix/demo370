@@ -591,11 +591,21 @@ function createHelixMesh() {
                 case 'ArrowRight':
                 case 'ArrowDown':
                 case ' ': // Space bar
+                    // Clear existing interval and start a new one
+                    clearInterval(autoAdvanceInterval);
                     updateScene(1);  // Move forward
+                    autoAdvanceInterval = setInterval(() => {
+                        updateScene(1);
+                    }, 10000);
                     break;
                 case 'ArrowLeft':
                 case 'ArrowUp':
+                    // Clear existing interval and start a new one
+                    clearInterval(autoAdvanceInterval);
                     updateScene(-1); // Move backward
+                    autoAdvanceInterval = setInterval(() => {
+                        updateScene(1);
+                    }, 10000);
                     break;
             }
         });
@@ -655,6 +665,11 @@ function createHelixMesh() {
             await loadWordPairs();
             updateScene(0); // Initial scene setup
             animate();
+            
+            // Start auto-advance
+            autoAdvanceInterval = setInterval(() => {
+                updateScene(1);
+            }, 10000); // Change scene every 10 seconds
         });
 
         // Initialize variables for audio
