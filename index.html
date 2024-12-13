@@ -180,7 +180,7 @@
         <button id="start-button">Click to Start</button>
     </div>
     <div id="scene-overlay">Scene 1: Neon City</div>
-    <div class="version-number">v1.2</div>
+    <div class="version-number">v1.3</div>
     <div class="song-name"></div>
     <div class="copyright">(c) by hot dog studios</div>
     <div class="scene-transition"></div>
@@ -196,64 +196,58 @@
         // 1.0 fix helix and other small stuff 
         // 1.1 dimming between scenes, and mix songs randomly
         // 1.2 new neon tunnel 
-         
+        // 1.3 read from words file and show random words
+
+        let wordPairs = [];
 
         // Scene Configuration
         const scenes = [
             {
-                text: ["MVS/XA", "31 bit"],
                 backgroundColor: 0x000000,
                 meshType: "grid",
-                meshColor: 0xff00ff, // Neon pink
-                textColor: "#00ff00" // Neon green
+                meshColor: 0xff00ff,
+                textColor: "#00ff00"
             },
             {
-                text: ["VM/SP", "moshix"],
                 backgroundColor: 0x000033,
                 meshType: "hills",
-                meshColor: 0x00ff00, // Neon green
-                textColor: "#ff00ff" // Neon pink
+                meshColor: 0x00ff00,
+                textColor: "#ff00ff"
             },
             {
-                text: ["VTAM", "VSAM"],
                 backgroundColor: 0x001a1a,
                 meshType: "wave",
-                meshColor: 0xffff00, // Neon yellow
-                textColor: "#00ffff" // Neon cyan
+                meshColor: 0xffff00,
+                textColor: "#00ffff"
             },
             {
-                text: ["COBOL", "PL/I"],
                 backgroundColor: 0x330033,
                 meshType: "sphereGrid",
-                meshColor: 0x00ffff, // Neon cyan
-                textColor: "#ff6600" // Neon orange
+                meshColor: 0x00ffff,
+                textColor: "#ff6600"
             },
             {
-                text: ["TSO", "ISPF"],
                 backgroundColor: 0x111111,
                 meshType: "helix",
-                meshColor: 0xff6600, // Neon orange
-                textColor: "#ffff00" // Neon yellow
+                meshColor: 0xff6600,
+                textColor: "#ffff00"
             },
             {
-                text: "IPL IML",
                 backgroundColor: 0x000000,
                 meshType: "beatLines",
-                meshColor: 0x00ccff, // Ocean blue neon color
-                textColor: "#ff33cc" // Keeping the contrasting pink text
+                meshColor: 0x00ccff,
+                textColor: "#ff33cc"
             },
             {
-                text: ["REXX", "SNA"],
-                backgroundColor: 0x000033,  // Deep blue background
+                backgroundColor: 0x000033,
                 meshType: "oceanWaves",
-                meshColor: 0xff00ff,  // Bright aqua neon
-                textColor: "#ff3399"  // Neon pink for contrast
+                meshColor: 0xff00ff,
+                textColor: "#ff3399"
             },
             {
-                text: ["D A,L", "Q N"],
                 backgroundColor: 0x000000,
                 meshType: "neonTunnel",
-                meshColor: 0x39ff14,  // Neon green
+                meshColor: 0x39ff14,
                 textColor: "#00ffff"
             }
         ];
@@ -526,29 +520,50 @@ function createHelixMesh() {
             return group;
         }
 
+        async function loadWordPairs() {
+            try {
+                const response = await fetch('words');
+                const text = await response.text();
+                wordPairs = text.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .map(line => line.split(/\s+/).slice(0, 2));
+            } catch (error) {
+                console.error('Error loading words file:', error);
+                // Fallback word pairs if file can't be loaded
+                wordPairs = [
+                    ['MVS/XA', '31 bit'],
+                    ['VM/SP', 'moshix'],
+                    ['VTAM', 'VSAM'],
+                    ['COBOL', 'PL/I'],
+                    ['TSO', 'ISPF'],
+                    ['IPL', 'IML'],
+                    ['REXX', 'SNA'],
+                    ['D A,L', 'Q N']
+                ];
+            }
+        }
+
         function updateScene(direction = 1) {
-            // Add transition effect
             const transition = document.querySelector('.scene-transition');
-            transition.style.opacity = '0.7';  // Dim screen
+            transition.style.opacity = '0.7';
             
-            // Delay scene update slightly
             setTimeout(() => {
                 currentSceneIndex = (currentSceneIndex + direction + scenes.length) % scenes.length;
                 const currentScene = scenes[currentSceneIndex];
                 
-                // Clear previous content
-                wordContainer.innerHTML = '';
+                // Get random word pair
+                const randomPair = wordPairs[Math.floor(Math.random() * wordPairs.length)];
                 
-                // Create new rotating text element
+                wordContainer.innerHTML = '';
                 const textElement = document.createElement('div');
                 textElement.className = 'rotating-text';
-                textElement.textContent = Array.isArray(currentScene.text) ? currentScene.text.join(' ') : currentScene.text;
+                textElement.textContent = randomPair.join(' ');
                 textElement.style.color = currentScene.textColor;
                 textElement.style.textShadow = `0 0 10px ${currentScene.textColor}, 
                                                0 0 20px ${currentScene.textColor}, 
                                                0 0 30px ${currentScene.textColor}`;
                 
-                // Add text element to container
                 wordContainer.appendChild(textElement);
                 
                 // Reset camera position based on scene type
@@ -567,7 +582,7 @@ function createHelixMesh() {
                     transition.style.opacity = '0';
                 }, 150);  // Brief delay before removing dim effect
                 
-            }, 300);  // Delay before scene change
+            }, 300);
         }
 
         // Add keyboard event listener
@@ -636,9 +651,11 @@ function createHelixMesh() {
             renderer.render(scene, camera);
         }
 
-        setInterval(() => updateScene(1), 10000); // Change scenes every 20 seconds
-        updateScene(0); // Initial scene setup
-        animate();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadWordPairs();
+            updateScene(0); // Initial scene setup
+            animate();
+        });
 
         // Initialize variables for audio
         let audio, audioContext, analyser, source;
