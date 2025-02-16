@@ -266,6 +266,12 @@
                 meshType: "cosmicWeb",
                 meshColor: 0x00ff88,       // Cyan-green color
                 textColor: "#ff3366"       // Pink-red text
+            },
+            {
+                backgroundColor: 0x000020,  // Deep blue background
+                meshType: "energyField",
+                meshColor: 0x00ffaa,       // Cyan-green base color
+                textColor: "#ff1493"       // Deep pink text
             }
         ];
 
@@ -327,6 +333,9 @@
                 break;
             case "cosmicWeb":
                 mesh = createCosmicWeb();
+                break;
+            case "energyField":
+                mesh = createEnergyField();
                 break;
             default:
                 console.error("Unknown mesh type:", type);
@@ -1131,6 +1140,212 @@ function createHelixMesh() {
             return group;
         }
 
+        function createEnergyField() {
+            const group = new THREE.Group();
+            
+            // Add more lights for better visibility
+            const ambientLight = new THREE.AmbientLight(0x111111);
+            group.add(ambientLight);
+
+            const pointLight1 = new THREE.PointLight(0xffffff, 2, 200); // Increased intensity
+            pointLight1.position.set(50, 50, 50);
+            group.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0xffffff, 2, 200); // Increased intensity
+            pointLight2.position.set(-50, -50, -50);
+            group.add(pointLight2);
+            
+            // Enhanced color palette with brighter colors
+            const colors = [
+                new THREE.Color(0x00ffaa),  // Cyan-green
+                new THREE.Color(0xff1493),  // Deep pink
+                new THREE.Color(0x4169e1),  // Royal blue
+                new THREE.Color(0xffd700),  // Gold
+                new THREE.Color(0xff4500)   // Orange-red
+            ];
+            
+            // Increase size and intensity of toruses
+            const torusCount = 5;
+            for (let i = 0; i < torusCount; i++) {
+                const radius = 25 + i * 10;
+                const tubeRadius = 2;
+                const torusGeometry = new THREE.TorusGeometry(radius, tubeRadius, 100, 100);
+                const torusMaterial = new THREE.MeshPhongMaterial({
+                    color: colors[i],
+                    emissive: colors[i],
+                    emissiveIntensity: 1.0,  // Increased from 0.5
+                    transparent: true,
+                    opacity: 0.9,            // Increased from 0.7
+                    shininess: 100
+                });
+                
+                const torus = new THREE.Mesh(torusGeometry, torusMaterial);
+                torus.userData = {
+                    baseRadius: radius,
+                    rotationSpeed: 0.3 + Math.random() * 0.3,
+                    pulseSpeed: 0.7 + Math.random() * 0.5,
+                    colorSpeed: 0.4 + Math.random() * 0.3
+                };
+                
+                group.add(torus);
+            }
+            
+            // Increase particle count and size
+            const particleCount = 5000;  // Increased from 3000
+            const particleGeometry = new THREE.BufferGeometry();
+            const particlePositions = new Float32Array(particleCount * 3);
+            const particleSpeeds = new Float32Array(particleCount);
+            const particleStartTimes = new Float32Array(particleCount);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 15 + Math.random() * 60;
+                const height = (Math.random() - 0.5) * 40;
+                
+                particlePositions[i * 3] = Math.cos(angle) * radius;
+                particlePositions[i * 3 + 1] = height;
+                particlePositions[i * 3 + 2] = Math.sin(angle) * radius;
+                
+                particleSpeeds[i] = 0.3 + Math.random() * 0.8;
+                particleStartTimes[i] = Math.random() * Math.PI * 2;
+            }
+            
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.8,  // Increased from 0.5
+                transparent: true,
+                opacity: 1.0,
+                blending: THREE.AdditiveBlending,
+                vertexColors: true
+            });
+            
+            const particleColors = new Float32Array(particleCount * 3);
+            particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+            
+            const particles = new THREE.Points(particleGeometry, particleMaterial);
+            group.add(particles);
+            
+            // Enhance central core
+            const coreGeometry = new THREE.OctahedronGeometry(12, 2);  // Increased size
+            const coreMaterial = new THREE.MeshPhongMaterial({
+                color: colors[0],
+                emissive: colors[0],
+                emissiveIntensity: 1.0,
+                transparent: true,
+                opacity: 0.9,
+                wireframe: true
+            });
+            
+            const core = new THREE.Mesh(coreGeometry, coreMaterial);
+            group.add(core);
+            
+            // Add more energy beams
+            const beamCount = 16;  // Increased from 12
+            for (let i = 0; i < beamCount; i++) {
+                const beamGeometry = new THREE.CylinderGeometry(0.3, 0.3, 50, 8);
+                const beamMaterial = new THREE.MeshPhongMaterial({
+                    color: colors[0],
+                    emissive: colors[0],
+                    emissiveIntensity: 1.0,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                
+                const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+                beam.userData = {
+                    angle: (i / beamCount) * Math.PI * 2,
+                    pulseSpeed: 0.7 + Math.random() * 0.5
+                };
+                
+                group.add(beam);
+            }
+
+            // Add animation data
+            group.userData.animate = function(time) {
+                const t = time * 0.001;
+                
+                // Animate toruses
+                group.children.forEach((child, index) => {
+                    if (child instanceof THREE.Mesh && child.geometry instanceof THREE.TorusGeometry) {
+                        // Complex rotation
+                        child.rotation.x = Math.sin(t * child.userData.rotationSpeed) * 0.5;
+                        child.rotation.y = t * child.userData.rotationSpeed;
+                        
+                        // Pulse radius
+                        const radiusPulse = Math.sin(t * child.userData.pulseSpeed) * 2;
+                        child.scale.set(1 + radiusPulse * 0.05, 1 + radiusPulse * 0.05, 1);
+                        
+                        // Color transition
+                        const colorIndex = Math.floor(t * child.userData.colorSpeed) % colors.length;
+                        const nextColorIndex = (colorIndex + 1) % colors.length;
+                        const mixFactor = (t * child.userData.colorSpeed) % 1;
+                        
+                        const currentColor = colors[colorIndex].clone().lerp(colors[nextColorIndex], mixFactor);
+                        child.material.color = currentColor;
+                        child.material.emissive = currentColor;
+                    } else if (child instanceof THREE.Points) {
+                        // Animate particles
+                        const positions = child.geometry.attributes.position.array;
+                        const colors = child.geometry.attributes.color.array;
+                        
+                        for (let i = 0; i < positions.length; i += 3) {
+                            const x = positions[i];
+                            const y = positions[i + 1];
+                            const z = positions[i + 2];
+                            
+                            const radius = Math.sqrt(x * x + z * z);
+                            const angle = Math.atan2(z, x) + 0.02; // Increased rotation speed
+                            
+                            positions[i] = Math.cos(angle) * radius;
+                            positions[i + 2] = Math.sin(angle) * radius;
+                            positions[i + 1] = y + Math.sin(t + i * 0.0001) * 0.5;
+                            
+                            // Dynamic colors
+                            const colorPhase = (t * 0.3 + i * 0.0001) % (Math.PI * 2);
+                            colors[i] = 0.5 + Math.sin(colorPhase) * 0.5;
+                            colors[i + 1] = 0.5 + Math.sin(colorPhase + Math.PI * 0.33) * 0.5;
+                            colors[i + 2] = 0.5 + Math.sin(colorPhase + Math.PI * 0.66) * 0.5;
+                        }
+                        
+                        child.geometry.attributes.position.needsUpdate = true;
+                        child.geometry.attributes.color.needsUpdate = true;
+                    } else if (child instanceof THREE.Mesh && child.geometry instanceof THREE.OctahedronGeometry) {
+                        // Animate core
+                        child.rotation.x += 0.02;
+                        child.rotation.y += 0.03;
+                        const coreScale = 1 + Math.sin(t * 2) * 0.1;
+                        child.scale.set(coreScale, coreScale, coreScale);
+                        
+                        // Pulse core color
+                        const colorIndex = Math.floor(t * 0.5) % colors.length;
+                        const nextColorIndex = (colorIndex + 1) % colors.length;
+                        const mixFactor = (t * 0.5) % 1;
+                        
+                        const currentColor = colors[colorIndex].clone().lerp(colors[nextColorIndex], mixFactor);
+                        child.material.color = currentColor;
+                        child.material.emissive = currentColor;
+                    } else if (child instanceof THREE.Mesh && child.geometry instanceof THREE.CylinderGeometry) {
+                        // Animate beams
+                        const angle = child.userData.angle + t * 0.5;
+                        child.position.x = Math.cos(angle) * 20;
+                        child.position.z = Math.sin(angle) * 20;
+                        child.rotation.y = angle + Math.PI / 2;
+                        
+                        const heightScale = 1 + Math.sin(t * child.userData.pulseSpeed) * 0.2;
+                        child.scale.y = heightScale;
+                        
+                        child.material.opacity = 0.2 + Math.sin(t * child.userData.pulseSpeed) * 0.2;
+                    }
+                });
+                
+                // Rotate entire structure
+                group.rotation.y = t * 0.1;
+            };
+            
+            return group;
+        }
+
         async function loadWordPairs() {
             try {
                 const response = await fetch('words');
@@ -1285,6 +1500,10 @@ function createHelixMesh() {
                 }
 
                 if (scenes[currentSceneIndex].meshType === "sphereGrid") {
+                    mesh.userData.animate(time);
+                }
+
+                if (scenes[currentSceneIndex].meshType === "energyField") {
                     mesh.userData.animate(time);
                 }
             }
@@ -1549,6 +1768,7 @@ function createHelixMesh() {
                     const colorPulse = Math.sin(time * 0.001 + r * 0.1) * 0.2 + 0.8;
                     colors[i] = colorPulse;
                     colors[i + 1] = colorPulse * 0.5;
+                    colors[i + 2] = colorPulse * 0.5;
                 }
                 
                 particles.attributes.position.needsUpdate = true;
