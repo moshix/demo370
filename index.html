@@ -136,14 +136,12 @@
         }
 
         .song-name {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
+            position: absolute;
+            bottom: -20px;
+            right: 0;
             color: rgba(255, 255, 255, 0.5);
             font-family: 'Courier New', Courier, monospace;
             font-size: 14px;
-            z-index: 1000;
-            pointer-events: none;
         }
 
         .copyright {
@@ -169,6 +167,22 @@
             transition: opacity 0.3s ease;
             z-index: 9999;
         }
+
+        .info-container {
+            position: fixed;
+            bottom: 30px;
+            right: 10px;
+            z-index: 1000;
+            pointer-events: none;
+            text-align: right;
+        }
+
+        .current-scene {
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -180,8 +194,11 @@
         <button id="start-button">Click to Start</button>
     </div>
     <div id="scene-overlay">Scene 1: Neon City</div>
-    <div class="version-number">v1.3</div>
-    <div class="song-name"></div>
+    <div class="version-number">v1.4</div>
+    <div class="info-container">
+        <div class="current-scene"></div>
+        <div class="song-name"></div>
+    </div>
     <div class="copyright">(c) by hot dog studios</div>
     <div class="scene-transition"></div>
     <script>
@@ -215,12 +232,6 @@
                 textColor: "#ff00ff"
             },
             {
-                backgroundColor: 0x001a1a,
-                meshType: "wave",
-                meshColor: 0xffff00,
-                textColor: "#00ffff"
-            },
-            {
                 backgroundColor: 0x330033,
                 meshType: "sphereGrid",
                 meshColor: 0x00ffff,
@@ -234,7 +245,7 @@
             },
             {
                 backgroundColor: 0x000000,
-                meshType: "beatLines",
+                meshType: "particleStorm",
                 meshColor: 0x00ccff,
                 textColor: "#ff33cc"
             },
@@ -249,6 +260,12 @@
                 meshType: "neonTunnel",
                 meshColor: 0x39ff14,
                 textColor: "#00ffff"
+            },
+            {
+                backgroundColor: 0x000015,  // Very dark blue background
+                meshType: "cosmicWeb",
+                meshColor: 0x00ff88,       // Cyan-green color
+                textColor: "#ff3366"       // Pink-red text
             }
         ];
 
@@ -281,6 +298,9 @@
         console.log("Current scene:", currentScene);
 
         switch (type) {
+            case "particleStorm":
+                mesh = createParticleStorm();
+                break;
             case "beatLines":
                 mesh = createBeatLinesMesh();
                 break;
@@ -288,20 +308,11 @@
                 mesh = createHelixMesh();
                 break;
             case "grid":
-                mesh = new THREE.Mesh(
-                    createGridMesh(),
-                    new THREE.MeshStandardMaterial({ color: meshColor, wireframe: true })
-                );
+                mesh = createGridMesh();
                 break;
             case "hills":
                 mesh = new THREE.Mesh(
                     createHillsMesh(),
-                    new THREE.MeshStandardMaterial({ color: meshColor, wireframe: true })
-                );
-                break;
-            case "wave":
-                mesh = new THREE.Mesh(
-                    createWaveMesh(),
                     new THREE.MeshStandardMaterial({ color: meshColor, wireframe: true })
                 );
                 break;
@@ -313,6 +324,9 @@
                 break;
             case "neonTunnel":
                 mesh = createNeonTunnelMesh();
+                break;
+            case "cosmicWeb":
+                mesh = createCosmicWeb();
                 break;
             default:
                 console.error("Unknown mesh type:", type);
@@ -349,9 +363,93 @@ function createHelixMesh() {
 
 
         function createGridMesh() {
-            const geometry = new THREE.PlaneGeometry(1000, 1000, 200, 200);
-            geometry.rotateX(-Math.PI / 2);
-            return geometry;
+            const group = new THREE.Group();
+            
+            // Create main grid
+            const gridSize = 100;
+            const divisions = 50;
+            const spacing = gridSize / divisions;
+            
+            // Create vertical and horizontal lines with varying heights
+            for (let i = -gridSize/2; i <= gridSize/2; i += spacing) {
+                // Create line geometries
+                const verticalGeometry = new THREE.BufferGeometry();
+                const horizontalGeometry = new THREE.BufferGeometry();
+                
+                const verticalPoints = [];
+                const horizontalPoints = [];
+                
+                // Create points with more detail
+                for (let j = -gridSize/2; j <= gridSize/2; j += spacing/2) {
+                    // Add points for vertical line
+                    verticalPoints.push(
+                        i, 0, j,
+                        i, 0, j + spacing/2
+                    );
+                    
+                    // Add points for horizontal line
+                    horizontalPoints.push(
+                        j, 0, i,
+                        j + spacing/2, 0, i
+                    );
+                }
+                
+                verticalGeometry.setAttribute('position', new THREE.Float32BufferAttribute(verticalPoints, 3));
+                horizontalGeometry.setAttribute('position', new THREE.Float32BufferAttribute(horizontalPoints, 3));
+                
+                // Create materials with glow effect
+                const material = new THREE.LineBasicMaterial({
+                    color: scenes[currentSceneIndex].meshColor,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                
+                const verticalLine = new THREE.LineSegments(verticalGeometry, material);
+                const horizontalLine = new THREE.LineSegments(horizontalGeometry, material);
+                
+                group.add(verticalLine);
+                group.add(horizontalLine);
+            }
+            
+            // Add animation data
+            group.userData.animate = function(time) {
+                const t = time * 0.001;
+                
+                group.children.forEach((line, index) => {
+                    const positions = line.geometry.attributes.position.array;
+                    
+                    for (let i = 0; i < positions.length; i += 3) {
+                        const x = positions[i];
+                        const z = positions[i + 2];
+                        
+                        // Create complex wave pattern
+                        const wave1 = Math.sin(x * 0.05 + t) * 5;
+                        const wave2 = Math.cos(z * 0.05 + t * 0.7) * 5;
+                        const wave3 = Math.sin(Math.sqrt(x * x + z * z) * 0.03 + t * 1.2) * 3;
+                        const wave4 = Math.cos((x + z) * 0.05 + t * 0.5) * 4;
+                        
+                        // Combine waves with distance-based amplitude
+                        const distance = Math.sqrt(x * x + z * z);
+                        const falloff = Math.max(0, 1 - distance / (gridSize * 0.7));
+                        positions[i + 1] = (wave1 + wave2 + wave3 + wave4) * falloff;
+                    }
+                    
+                    line.geometry.attributes.position.needsUpdate = true;
+                    
+                    // Pulse opacity based on wave height
+                    const avgHeight = Math.sin(t + index * 0.1) * 0.5 + 0.5;
+                    line.material.opacity = 0.3 + avgHeight * 0.7;
+                    
+                    // Color cycling
+                    const hue = (t * 0.1 + index * 0.01) % 1;
+                    line.material.color.setHSL(hue, 0.8, 0.5);
+                });
+                
+                // Rotate entire grid slowly
+                group.rotation.y = Math.sin(t * 0.1) * 0.2;
+            };
+            
+            return group;
         }
 
         function createHillsMesh() {
@@ -372,39 +470,168 @@ function createHelixMesh() {
         }
 
         function createWaveMesh() {
-            const geometry = new THREE.PlaneGeometry(1000, 1000, 200, 200);
+            const geometry = new THREE.PlaneGeometry(1000, 1000, 100, 100);
             geometry.rotateX(-Math.PI / 2);
             
             const positionAttribute = geometry.attributes.position;
             const vertex = new THREE.Vector3();
             
+            // Create multiple overlapping wave patterns
             for (let i = 0; i < positionAttribute.count; i++) {
                 vertex.fromBufferAttribute(positionAttribute, i);
-                vertex.y = Math.sin(vertex.x * 0.02) * Math.cos(vertex.z * 0.02) * 20;
+                
+                // Create complex wave pattern using multiple frequencies
+                const wave1 = Math.sin(vertex.x * 0.03) * 15;
+                const wave2 = Math.cos(vertex.z * 0.04) * 10;
+                const wave3 = Math.sin(vertex.x * 0.02 + vertex.z * 0.02) * 20;
+                const wave4 = Math.cos(Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z) * 0.03) * 15;
+                
+                // Combine waves with distance-based amplitude
+                const distance = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
+                const falloff = Math.max(0, 1 - distance / 500); // Reduce height at edges
+                vertex.y = (wave1 + wave2 + wave3 + wave4) * falloff;
+                
                 positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
             }
             
-            positionAttribute.needsUpdate = true;
+            // Add animation data
+            geometry.userData.originalPositions = positionAttribute.array.slice();
+            geometry.userData.animate = function(time) {
+                const positions = positionAttribute.array;
+                const original = geometry.userData.originalPositions;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = original[i];
+                    const z = original[i + 2];
+                    
+                    // Animate waves over time
+                    const wave1 = Math.sin(x * 0.03 + time * 0.001) * 15;
+                    const wave2 = Math.cos(z * 0.04 + time * 0.002) * 10;
+                    const wave3 = Math.sin(x * 0.02 + z * 0.02 + time * 0.001) * 20;
+                    const wave4 = Math.cos(Math.sqrt(x * x + z * z) * 0.03 - time * 0.001) * 15;
+                    
+                    const distance = Math.sqrt(x * x + z * z);
+                    const falloff = Math.max(0, 1 - distance / 500);
+                    
+                    positions[i + 1] = (wave1 + wave2 + wave3 + wave4) * falloff;
+                }
+                
+                positionAttribute.needsUpdate = true;
+            };
+            
             return geometry;
         }
 
 		function createSphereGridMesh() {
 		    const group = new THREE.Group();
-		    const radius = 4;
-		    const spacing = 15;
-		    const gridSize = 100;
-		
-		    const sphereGeometry = new THREE.SphereGeometry(radius, 16, 16);
-		    const sphereMaterial = new THREE.MeshStandardMaterial({ color: scenes[currentSceneIndex].meshColor });
-		
+		    const radius = 2;
+		    const spacing = 12;
+		    const gridSize = 20; // Reduced for better performance and denser look
+		    
+		    // Create color palette for transitions
+		    const colors = [
+		        new THREE.Color(scenes[currentSceneIndex].meshColor),
+		        new THREE.Color(0xffffff),
+		        new THREE.Color(0x00ffff)
+		    ];
+
+		    // Create spheres with more interesting materials
 		    for (let x = -gridSize / 2; x < gridSize / 2; x++) {
 		        for (let z = -gridSize / 2; z < gridSize / 2; z++) {
+		            // Create main sphere
+		            const sphereGeometry = new THREE.SphereGeometry(radius, 16, 16);
+		            const sphereMaterial = new THREE.MeshPhongMaterial({ 
+		                color: scenes[currentSceneIndex].meshColor,
+		                emissive: scenes[currentSceneIndex].meshColor,
+		                emissiveIntensity: 0.5,
+		                shininess: 50,
+		                transparent: true,
+		                opacity: 0.8
+		            });
+		            
 		            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-		            sphere.position.set(x * spacing, 0, z * spacing);
+		            
+		            // Create glow effect
+		            const glowGeometry = new THREE.SphereGeometry(radius * 1.2, 16, 16);
+		            const glowMaterial = new THREE.MeshBasicMaterial({
+		                color: scenes[currentSceneIndex].meshColor,
+		                transparent: true,
+		                opacity: 0.3,
+		                blending: THREE.AdditiveBlending,
+		                side: THREE.BackSide
+		            });
+		            
+		            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+		            sphere.add(glow);
+		            
+		            // Position with wave offset
+		            sphere.position.set(
+		                x * spacing,
+		                0,
+		                z * spacing
+		            );
+		            
+		            // Store initial position and random phase
+		            sphere.userData = {
+		                initialY: sphere.position.y,
+		                phase: Math.random() * Math.PI * 2,
+		                pulseSpeed: 0.5 + Math.random() * 0.5,
+		                colorPhase: Math.random() * Math.PI * 2
+		            };
+		            
 		            group.add(sphere);
 		        }
 		    }
-		
+
+		    // Add animation data
+		    group.userData.animate = function(time) {
+		        const t = time * 0.001;
+		        
+		        group.children.forEach((sphere, index) => {
+		            // Calculate wave position
+		            const x = sphere.position.x;
+		            const z = sphere.position.z;
+		            const distance = Math.sqrt(x * x + z * z);
+		            
+		            // Complex wave motion
+		            const wave1 = Math.sin(distance * 0.05 + t) * 5;
+		            const wave2 = Math.cos(t * 0.5 + sphere.userData.phase) * 3;
+		            const wave3 = Math.sin(t * 0.3 + distance * 0.05) * 4;
+		            
+		            // Combine waves
+		            sphere.position.y = wave1 + wave2 + wave3;
+		            
+		            // Pulse size
+		            const scale = 1 + Math.sin(t * sphere.userData.pulseSpeed + sphere.userData.phase) * 0.2;
+		            sphere.scale.set(scale, scale, scale);
+		            
+		            // Color transition
+		            const colorT = (Math.sin(t * 0.5 + sphere.userData.colorPhase) + 1) / 2;
+		            const currentColor = new THREE.Color();
+		            const colorIndex = Math.floor(t * 0.2) % colors.length;
+		            const nextColorIndex = (colorIndex + 1) % colors.length;
+		            
+		            currentColor.copy(colors[colorIndex]).lerp(colors[nextColorIndex], colorT);
+		            
+		            // Apply color to both sphere and glow
+		            sphere.material.color = currentColor;
+		            sphere.material.emissive = currentColor;
+		            sphere.children[0].material.color = currentColor;
+		            
+		            // Adjust opacity based on height
+		            const heightFactor = (sphere.position.y + 10) / 20;
+		            sphere.material.opacity = 0.5 + heightFactor * 0.5;
+		            sphere.children[0].material.opacity = 0.2 + heightFactor * 0.3;
+		            
+		            // Rotate individual spheres
+		            sphere.rotation.x = t * 0.2 + sphere.userData.phase;
+		            sphere.rotation.y = t * 0.3 + sphere.userData.phase;
+		        });
+		        
+		        // Rotate entire grid slowly
+		        group.rotation.y = Math.sin(t * 0.1) * 0.2;
+		    };
+		    
 		    return group;
 		}
 
@@ -487,36 +714,252 @@ function createHelixMesh() {
             const group = new THREE.Group();
             const ringCount = 40;
             
+            // Create a color palette for dynamic color changes
+            const colors = [
+                new THREE.Color(0x39ff14),  // Neon green
+                new THREE.Color(0xff1493),  // Deep pink
+                new THREE.Color(0x00ffff),  // Cyan
+                new THREE.Color(0xff4500)   // Orange-red
+            ];
+            
             for (let i = 0; i < ringCount; i++) {
-                // Create main ring
-                const geometry = new THREE.RingGeometry(30, 32, 32);
-                const material = new THREE.MeshBasicMaterial({
-                    color: 0x39ff14,
-                    side: THREE.DoubleSide
-                });
+                // Create main ring with varying sizes
+                const radius = 30 + Math.sin(i * 0.2) * 5;
+                const thickness = 2 + Math.sin(i * 0.5) * 1;
+                const geometry = new THREE.RingGeometry(radius, radius + thickness, 32);
                 
-                // Create halo ring
-                const haloGeometry = new THREE.RingGeometry(28, 34, 32);
-                const haloMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x39ff14,
+                // Create material with dynamic color
+                const material = new THREE.MeshBasicMaterial({
+                    color: colors[i % colors.length],
                     side: THREE.DoubleSide,
                     transparent: true,
-                    opacity: 0.4
+                    opacity: 0.8
+                });
+                
+                // Create outer glow ring
+                const glowGeometry = new THREE.RingGeometry(radius - 2, radius + thickness + 2, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: colors[i % colors.length],
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.3,
+                    blending: THREE.AdditiveBlending
+                });
+                
+                // Create energy particles around the ring
+                const particleCount = 50;
+                const particleGeometry = new THREE.BufferGeometry();
+                const particlePositions = new Float32Array(particleCount * 3);
+                
+                for (let j = 0; j < particleCount; j++) {
+                    const angle = (j / particleCount) * Math.PI * 2;
+                    const r = radius + (Math.random() - 0.5) * 5;
+                    particlePositions[j * 3] = Math.cos(angle) * r;
+                    particlePositions[j * 3 + 1] = Math.sin(angle) * r;
+                    particlePositions[j * 3 + 2] = 0;
+                }
+                
+                particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+                
+                const particleMaterial = new THREE.PointsMaterial({
+                    color: colors[i % colors.length],
+                    size: 0.5,
+                    transparent: true,
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending
                 });
                 
                 const ring = new THREE.Mesh(geometry, material);
-                const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                const particles = new THREE.Points(particleGeometry, particleMaterial);
                 
                 const ringGroup = new THREE.Group();
                 ringGroup.add(ring);
-                ringGroup.add(halo);
+                ringGroup.add(glow);
+                ringGroup.add(particles);
                 
+                // Add some rotation offset
+                ringGroup.rotation.x = Math.sin(i * 0.1) * 0.1;
+                ringGroup.rotation.y = Math.cos(i * 0.1) * 0.1;
+                
+                // Position with slight offset for more organic feel
+                ringGroup.position.x = Math.sin(i * 0.2) * 10;
+                ringGroup.position.y = Math.cos(i * 0.3) * 10;
                 ringGroup.position.z = -200 - (i * 100);
-                ringGroup.userData.speed = 2.0; // speed of camera
+                
+                // Store initial position for animation
+                ringGroup.userData = {
+                    initialX: ringGroup.position.x,
+                    initialY: ringGroup.position.y,
+                    speed: 2.0 + Math.random() * 0.5,
+                    rotationSpeed: 0.01 + Math.random() * 0.02,
+                    particleRotation: Math.random() * Math.PI * 2
+                };
                 
                 group.add(ringGroup);
             }
             
+            // Add animation data
+            group.userData.animate = function(time) {
+                const t = time * 0.001;
+                
+                group.children.forEach((ringGroup, i) => {
+                    // Move rings forward
+                    ringGroup.position.z += ringGroup.userData.speed;
+                    
+                    // Add wave motion
+                    ringGroup.position.x = ringGroup.userData.initialX + Math.sin(t + i * 0.2) * 15;
+                    ringGroup.position.y = ringGroup.userData.initialY + Math.cos(t * 0.7 + i * 0.3) * 15;
+                    
+                    // Rotate rings
+                    ringGroup.rotation.z += ringGroup.userData.rotationSpeed;
+                    
+                    // Rotate particles around ring
+                    const particles = ringGroup.children[2];
+                    particles.rotation.z = ringGroup.userData.particleRotation + t;
+                    
+                    // Pulse the glow
+                    const glow = ringGroup.children[1];
+                    glow.material.opacity = 0.3 + Math.sin(t * 2 + i * 0.5) * 0.2;
+                    
+                    // Color cycling
+                    const colorIndex = Math.floor((t + i * 0.1) % colors.length);
+                    const nextColorIndex = (colorIndex + 1) % colors.length;
+                    const mixFactor = ((t + i * 0.1) % 1);
+                    
+                    const currentColor = colors[colorIndex].clone();
+                    currentColor.lerp(colors[nextColorIndex], mixFactor);
+                    
+                    ringGroup.children.forEach(child => {
+                        child.material.color = currentColor;
+                    });
+                    
+                    // Reset position when too close
+                    if (ringGroup.position.z > 100) {
+                        ringGroup.position.z = -4000;
+                        ringGroup.position.x = ringGroup.userData.initialX;
+                        ringGroup.position.y = ringGroup.userData.initialY;
+                    }
+                });
+            };
+            
+            return group;
+        }
+
+        // Add this new function for the Cosmic Web scene
+        function createCosmicWeb() {
+            const group = new THREE.Group();
+            
+            // Create nodes (connection points)
+            const nodeCount = 100;  // Doubled number of nodes
+            const nodes = [];
+            const nodeGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const nodeMaterial = new THREE.MeshPhongMaterial({
+                color: scenes[currentSceneIndex].meshColor,
+                emissive: scenes[currentSceneIndex].meshColor,
+                emissiveIntensity: 0.5
+            });
+
+            // Distribute nodes in 3D space
+            for (let i = 0; i < nodeCount; i++) {
+                const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+                const radius = 30 + Math.random() * 40;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                node.position.x = radius * Math.sin(phi) * Math.cos(theta);
+                node.position.y = radius * Math.sin(phi) * Math.sin(theta);
+                node.position.z = radius * Math.cos(phi);
+                
+                nodes.push(node);
+                group.add(node);
+            }
+
+            // Create energy beams between nearby nodes
+            const beamMaterial = new THREE.LineBasicMaterial({
+                color: scenes[currentSceneIndex].meshColor,
+                transparent: true,
+                opacity: 0.3
+            });
+
+            nodes.forEach((node, i) => {
+                nodes.slice(i + 1).forEach(otherNode => {
+                    const distance = node.position.distanceTo(otherNode.position);
+                    if (distance < 40) { // Increased connection distance
+                        const points = [];
+                        points.push(node.position);
+                        points.push(otherNode.position);
+                        
+                        const beamGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                        const beam = new THREE.Line(beamGeometry, beamMaterial);
+                        group.add(beam);
+                    }
+                });
+            });
+
+            // Add floating energy particles
+            const particleCount = 4000;  // Doubled particle count
+            const particleGeometry = new THREE.BufferGeometry();
+            const particlePositions = new Float32Array(particleCount * 3);
+            const particleSpeeds = new Float32Array(particleCount);
+            const particlePaths = new Float32Array(particleCount * 6); // Start and end points
+
+            // Initialize particles along the beams
+            for (let i = 0; i < particleCount; i++) {
+                // Random position between two random nodes
+                const node1 = nodes[Math.floor(Math.random() * nodes.length)];
+                const node2 = nodes[Math.floor(Math.random() * nodes.length)];
+                
+                particlePaths[i * 6] = node1.position.x;
+                particlePaths[i * 6 + 1] = node1.position.y;
+                particlePaths[i * 6 + 2] = node1.position.z;
+                particlePaths[i * 6 + 3] = node2.position.x;
+                particlePaths[i * 6 + 4] = node2.position.y;
+                particlePaths[i * 6 + 5] = node2.position.z;
+                
+                particleSpeeds[i] = 0.2 + Math.random() * 0.8; // Random speed for each particle
+            }
+
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                color: scenes[currentSceneIndex].meshColor,
+                size: 0.2,  // Slightly smaller particles for better performance
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+            group.add(particleSystem);
+
+            // Add animation
+            group.userData.animate = function(time) {
+                // Pulse nodes
+                nodes.forEach((node, i) => {
+                    const scale = 1 + Math.sin(time * 0.001 + i * 0.5) * 0.3;
+                    node.scale.set(scale, scale, scale);
+                });
+
+                // Animate particles along paths
+                const positions = particleGeometry.attributes.position.array;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const progress = (time * 0.001 * particleSpeeds[i]) % 1;
+                    
+                    // Lerp between start and end points
+                    positions[i * 3] = particlePaths[i * 6] + (particlePaths[i * 6 + 3] - particlePaths[i * 6]) * progress;
+                    positions[i * 3 + 1] = particlePaths[i * 6 + 1] + (particlePaths[i * 6 + 4] - particlePaths[i * 6 + 1]) * progress;
+                    positions[i * 3 + 2] = particlePaths[i * 6 + 2] + (particlePaths[i * 6 + 5] - particlePaths[i * 6 + 2]) * progress;
+                }
+                
+                particleGeometry.attributes.position.needsUpdate = true;
+
+                // Rotate entire structure slowly
+                group.rotation.y += 0.001;
+                group.rotation.x = Math.sin(time * 0.0002) * 0.3;
+            };
+
             return group;
         }
 
@@ -582,6 +1025,8 @@ function createHelixMesh() {
                     transition.style.opacity = '0';
                 }, 150);  // Brief delay before removing dim effect
                 
+                updateSongDisplay();
+                
             }, 300);
         }
 
@@ -612,8 +1057,13 @@ function createHelixMesh() {
 
         function animate() {
             requestAnimationFrame(animate);
+            const time = Date.now();
+            
             if (mesh) {
-                if (scenes[currentSceneIndex].meshType === "oceanWaves") {
+                if (scenes[currentSceneIndex].meshType === "wave") {
+                    // Animate the wave mesh
+                    mesh.geometry.userData.animate(time);
+                } else if (scenes[currentSceneIndex].meshType === "oceanWaves") {
                     const time = Date.now() * 0.001;
                     
                     mesh.children.forEach((waveMesh, layerIndex) => {
@@ -649,6 +1099,8 @@ function createHelixMesh() {
                     if (mesh.position.z > 1000) {
                         mesh.position.z = -1000;
                     }
+                } else if (scenes[currentSceneIndex].meshType === "grid") {
+                    mesh.userData.animate(time);
                 } else if (scenes[currentSceneIndex].meshType !== "helix") {
                     mesh.position.z += 0.2;
                     if (mesh.position.z > 500) {
@@ -656,6 +1108,14 @@ function createHelixMesh() {
                     }
                 } else {
                     mesh.rotation.y += 0.01;
+                }
+
+                if (scenes[currentSceneIndex].meshType === "neonTunnel") {
+                    mesh.userData.animate(time);
+                }
+
+                if (scenes[currentSceneIndex].meshType === "sphereGrid") {
+                    mesh.userData.animate(time);
                 }
             }
             renderer.render(scene, camera);
@@ -783,6 +1243,7 @@ function createHelixMesh() {
                 .replace('.mp3', '')
                 .replace('.flac', '');
             document.querySelector('.song-name').textContent = songName;
+            document.querySelector('.current-scene').textContent = scenes[currentSceneIndex].meshType;
         }
 
         // Add this function to shuffle arrays
@@ -837,6 +1298,100 @@ function createHelixMesh() {
                 50
             );
             camera.lookAt(lookAheadX, 0, lookAheadZ);
+        }
+
+        // Replace the createBeatLinesMesh function with this:
+        function createParticleStorm() {
+            const group = new THREE.Group();
+            
+            // Create particle system
+            const particleCount = 5000;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                // Random positions in a sphere
+                const radius = Math.random() * 50;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                positions[i] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[i + 2] = radius * Math.cos(phi);
+                
+                // Colors
+                colors[i] = 0.5 + Math.random() * 0.5;     // R
+                colors[i + 1] = 0.2 + Math.random() * 0.3; // G
+                colors[i + 2] = 1.0;                       // B
+            }
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            // Create particle material
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+            
+            // Create particle system
+            const particleSystem = new THREE.Points(particles, particleMaterial);
+            group.add(particleSystem);
+            
+            // Create central core (icosahedron)
+            const coreGeometry = new THREE.IcosahedronGeometry(10, 1);
+            const coreMaterial = new THREE.MeshBasicMaterial({
+                color: scenes[currentSceneIndex].meshColor,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            const core = new THREE.Mesh(coreGeometry, coreMaterial);
+            group.add(core);
+            
+            // Add animation data to the group
+            group.userData.animate = function(time) {
+                // Rotate the entire group
+                group.rotation.y += 0.002;
+                
+                // Animate particles
+                const positions = particles.attributes.position.array;
+                const colors = particles.attributes.color.array;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    // Spiral motion
+                    const x = positions[i];
+                    const y = positions[i + 1];
+                    const z = positions[i + 2];
+                    
+                    const r = Math.sqrt(x * x + z * z);
+                    const theta = Math.atan2(z, x) + 0.01;
+                    
+                    positions[i] = r * Math.cos(theta);
+                    positions[i + 2] = r * Math.sin(theta);
+                    positions[i + 1] = y + Math.sin(time * 0.001 + r * 0.1) * 0.2;
+                    
+                    // Pulse colors
+                    const colorPulse = Math.sin(time * 0.001 + r * 0.1) * 0.2 + 0.8;
+                    colors[i] = colorPulse;
+                    colors[i + 1] = colorPulse * 0.5;
+                }
+                
+                particles.attributes.position.needsUpdate = true;
+                particles.attributes.color.needsUpdate = true;
+                
+                // Animate core
+                core.rotation.x += 0.01;
+                core.rotation.y += 0.005;
+                const scale = 1 + Math.sin(time * 0.001) * 0.1;
+                core.scale.set(scale, scale, scale);
+            };
+            
+            return group;
         }
     </script>
 </body>
