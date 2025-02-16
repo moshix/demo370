@@ -194,7 +194,7 @@
         <button id="start-button">Click to Start</button>
     </div>
     <div id="scene-overlay">Scene 1: Neon City</div>
-    <div class="version-number">v1.4</div>
+    <div class="version-number">v1.5</div>
     <div class="info-container">
         <div class="current-scene"></div>
         <div class="song-name"></div>
@@ -338,26 +338,194 @@
 
 function createHelixMesh() {
     const group = new THREE.Group();
-    const objectCount = 120; // Number of objects in the helix
-    const radius = 35; // Radius of the helix
-    const height = 70; // Height of the helix
-    const turns = 4; // Number of turns in the helix
-
-    const geometry = new THREE.SphereGeometry(3, 16, 16); // Geometry for helix elements
-    const material = new THREE.MeshStandardMaterial({ color: scenes[currentSceneIndex].meshColor });
-
-    for (let i = 0; i < objectCount; i++) {
-        const angle = (i / objectCount) * (turns * Math.PI * 2); // Calculate angle for this object
-        const y = (i / objectCount) * height - height / 2; // Spread objects vertically
-        const x = radius * Math.cos(angle); // X-coordinate
-        const z = radius * Math.sin(angle); // Z-coordinate
-
-        const sphere = new THREE.Mesh(geometry, material);
-        sphere.position.set(x, y, z);
-        group.add(sphere); // Add sphere to the group
+    
+    // Create color palette for transitions
+    const colors = [
+        new THREE.Color(scenes[currentSceneIndex].meshColor),
+        new THREE.Color(0xffffff),
+        new THREE.Color(0x00ffff),
+        new THREE.Color(0xff1493)
+    ];
+    
+    // Helix parameters
+    const objectCount = 200;  // Increased from 120
+    const radius = 35;
+    const height = 100;  // Increased height
+    const turns = 6;     // More turns
+    
+    // Create main helix strands
+    for (let strand = 0; strand < 2; strand++) {  // Double helix
+        for (let i = 0; i < objectCount; i++) {
+            const angle = (i / objectCount) * (turns * Math.PI * 2) + (strand * Math.PI);
+            const y = (i / objectCount) * height - height / 2;
+            
+            // Create sphere with glow effect
+            const sphereGeometry = new THREE.SphereGeometry(1.5, 12, 12);
+            const sphereMaterial = new THREE.MeshPhongMaterial({
+                color: colors[0],
+                emissive: colors[0],
+                emissiveIntensity: 0.5,
+                shininess: 50,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            
+            // Add glow effect
+            const glowGeometry = new THREE.SphereGeometry(2, 12, 12);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: colors[0],
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending,
+                side: THREE.BackSide
+            });
+            
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            sphere.add(glow);
+            
+            // Position sphere
+            sphere.position.set(
+                radius * Math.cos(angle),
+                y,
+                radius * Math.sin(angle)
+            );
+            
+            // Store initial position and parameters
+            sphere.userData = {
+                initialAngle: angle,
+                initialY: y,
+                strand: strand,
+                phase: i / objectCount,
+                pulseSpeed: 0.5 + Math.random() * 0.5
+            };
+            
+            group.add(sphere);
+        }
     }
-
-    return group; // Return the group containing all helix elements
+    
+    // Add connecting strands between helixes
+    const connectionCount = 40;
+    for (let i = 0; i < connectionCount; i++) {
+        const y = (i / connectionCount) * height - height / 2;
+        const angle = (i / connectionCount) * (turns * Math.PI * 2);
+        
+        const geometry = new THREE.CylinderGeometry(0.2, 0.2, radius * 2, 8);
+        const material = new THREE.MeshPhongMaterial({
+            color: colors[0],
+            emissive: colors[0],
+            emissiveIntensity: 0.5,
+            transparent: true,
+            opacity: 0.6
+        });
+        
+        const connector = new THREE.Mesh(geometry, material);
+        connector.position.y = y;
+        connector.rotation.z = angle;
+        
+        connector.userData = {
+            initialY: y,
+            initialAngle: angle,
+            phase: i / connectionCount
+        };
+        
+        group.add(connector);
+    }
+    
+    // Add particle effects
+    const particleCount = 1000;
+    const particleGeometry = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    
+    for (let i = 0; i < particleCount * 3; i += 3) {
+        const angle = Math.random() * Math.PI * 2;
+        const y = Math.random() * height - height / 2;
+        const r = radius + (Math.random() - 0.5) * 10;
+        
+        particlePositions[i] = Math.cos(angle) * r;
+        particlePositions[i + 1] = y;
+        particlePositions[i + 2] = Math.sin(angle) * r;
+    }
+    
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    
+    const particleMaterial = new THREE.PointsMaterial({
+        color: colors[0],
+        size: 0.5,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+    });
+    
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    group.add(particles);
+    
+    // Add animation
+    group.userData.animate = function(time) {
+        const t = time * 0.001;
+        
+        // Animate spheres
+        group.children.forEach((child, index) => {
+            if (child instanceof THREE.Points) {
+                // Animate particles
+                const positions = child.geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    const angle = Math.atan2(positions[i + 2], positions[i]) + 0.002;
+                    const r = Math.sqrt(positions[i] * positions[i] + positions[i + 2] * positions[i + 2]);
+                    positions[i] = Math.cos(angle) * r;
+                    positions[i + 2] = Math.sin(angle) * r;
+                    positions[i + 1] += Math.sin(t + i * 0.1) * 0.1;
+                }
+                child.geometry.attributes.position.needsUpdate = true;
+            } else if (child.userData.hasOwnProperty('strand')) {
+                // Animate helix spheres
+                const sphere = child;
+                const phase = sphere.userData.phase;
+                
+                // Complex motion
+                const radiusOffset = Math.sin(t * 0.5 + phase * 10) * 3;
+                const angleOffset = Math.sin(t * 0.3 + phase * 5) * 0.1;
+                const yOffset = Math.sin(t * 0.7 + phase * 15) * 2;
+                
+                const angle = sphere.userData.initialAngle + angleOffset;
+                sphere.position.x = (radius + radiusOffset) * Math.cos(angle);
+                sphere.position.z = (radius + radiusOffset) * Math.sin(angle);
+                sphere.position.y = sphere.userData.initialY + yOffset;
+                
+                // Pulse size
+                const scale = 1 + Math.sin(t * sphere.userData.pulseSpeed + phase * 10) * 0.3;
+                sphere.scale.set(scale, scale, scale);
+                
+                // Color transition
+                const colorIndex = Math.floor(t * 0.2) % colors.length;
+                const nextColorIndex = (colorIndex + 1) % colors.length;
+                const mixFactor = ((t * 0.2) % 1);
+                
+                const currentColor = colors[colorIndex].clone().lerp(colors[nextColorIndex], mixFactor);
+                
+                sphere.material.color = currentColor;
+                sphere.material.emissive = currentColor;
+                sphere.children[0].material.color = currentColor;
+            } else {
+                // Animate connectors
+                const connector = child;
+                const phase = connector.userData.phase;
+                
+                connector.position.y = connector.userData.initialY + Math.sin(t + phase * 10) * 2;
+                connector.rotation.z = connector.userData.initialAngle + Math.sin(t * 0.5 + phase * 5) * 0.2;
+                
+                // Pulse opacity
+                connector.material.opacity = 0.3 + Math.sin(t * 0.8 + phase * 5) * 0.3;
+            }
+        });
+        
+        // Rotate entire structure
+        group.rotation.y += 0.005;
+        group.rotation.x = Math.sin(t * 0.2) * 0.1;
+    };
+    
+    return group;
 }
 
 
@@ -1100,6 +1268,8 @@ function createHelixMesh() {
                         mesh.position.z = -1000;
                     }
                 } else if (scenes[currentSceneIndex].meshType === "grid") {
+                    mesh.userData.animate(time);
+                } else if (scenes[currentSceneIndex].meshType === "helix") {
                     mesh.userData.animate(time);
                 } else if (scenes[currentSceneIndex].meshType !== "helix") {
                     mesh.position.z += 0.2;
